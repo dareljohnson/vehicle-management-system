@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+    // SPDX-FileCopyrightText: 2024  Darel Johnson <dareljohnson@yahoo.com>
+    //
+    // SPDX-License-Identifier: GPL-3.0-or-later
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @media (max-width: 640px) {
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+            #vehicle-table th,
+            #vehicle-table td,
+            #analysis-table th,
+            #analysis-table td {
+                white-space: nowrap;
+            }
+            #vehicle-table th:nth-child(3),
+            #vehicle-table td:nth-child(3),
+            #vehicle-table th:nth-child(4),
+            #vehicle-table td:nth-child(4),
+            #analysis-table th:nth-child(3),
+            #analysis-table td:nth-child(3),
+            #analysis-table th:nth-child(4),
+            #analysis-table td:nth-child(4),
+            #analysis-table th:nth-child(5),
+            #analysis-table td:nth-child(5) {
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto p-4">
+        <h1 class="text-4xl font-bold mb-4">Vehicle Management System</h1>
+        <nav class="mb-4">
+            <ul class="flex space-x-4">
+                <li><a href="#" class="text-blue-600 hover:text-blue-800" onclick="showPage('admin')">Admin</a></li>
+                <li><a href="#" class="text-blue-600 hover:text-blue-800" onclick="showPage('analysis')">Analysis</a></li>
+            </ul>
+        </nav>
+        
+        <div id="admin-page" class="hidden">
+            <h1 class="text-2xl font-bold mb-4">Admin Page</h1>
+            <form id="vehicle-form" class="mb-4">
+                <input type="hidden" id="vehicle-id">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="make" placeholder="Make" class="border p-2 rounded" required>
+                    <input type="text" id="model" placeholder="Model" class="border p-2 rounded" required>
+                    <input type="number" id="year" placeholder="Year" class="border p-2 rounded" required>
+                </div>
+                <div class="mt-2">
+                    <button type="submit" id="submit-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Add Vehicle</button>
+                    <button type="button" id="cancel-btn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 hidden">Cancel</button>
+                </div>
+            </form>
+            <div class="mb-4 relative">
+                <input type="text" id="admin-search" placeholder="Search by make, model, or year" class="w-full border p-2 pr-16 rounded">
+                <button id="admin-clear-search" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm hover:bg-gray-300">Clear</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table id="vehicle-table" class="w-full bg-white shadow-md rounded">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Make</th>
+                            <th class="py-3 px-6 text-left">Model</th>
+                            <th class="py-3 px-2 text-center w-20">Year</th>
+                            <th class="py-3 px-2 text-center w-32">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="admin-pagination" class="mt-4 flex justify-center"></div>
+        </div>
+        
+        <div id="analysis-page" class="hidden">
+            <h1 class="text-2xl font-bold mb-4">Analysis Page</h1>
+            <div class="mb-4">
+                <p>Total Vehicles Counted: <span id="total-count" class="font-bold">0</span></p>
+            </div>
+            <div class="mb-4 relative">
+                <input type="text" id="analysis-search" placeholder="Search by make, model, or year" class="w-full border p-2 pr-16 rounded">
+                <button id="analysis-clear-search" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm hover:bg-gray-300">Clear</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table id="analysis-table" class="w-full bg-white shadow-md rounded mb-4">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Make</th>
+                            <th class="py-3 px-6 text-left">Model</th>
+                            <th class="py-3 px-2 text-center w-20">Year</th>
+                            <th class="py-3 px-2 text-center w-20">Count</th>
+                            <th class="py-3 px-2 text-center w-24">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div id="analysis-pagination" class="mt-4 flex justify-center"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                <div class="w-full h-64 md:h-auto">
+                    <canvas id="vehicleCountChart"></canvas>
+                </div>
+                <div class="w-full h-64 md:h-auto flex flex-col">
+                    <h3 class="text-lg font-semibold mb-2 text-center">Vehicles by Make</h3>
+                    <div class="flex-grow">
+                        <canvas id="vehiclesByMakeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

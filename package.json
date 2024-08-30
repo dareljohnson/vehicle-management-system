@@ -1,0 +1,16 @@
+{
+    "name": "vehicle-management-system",
+    "author": "Darel Johnson",
+    "license": "GNU General Public License",
+    "module": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "bun run server.js"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.0.0"
+    },
+    "dependencies": {
+        "figlet": "^1.7.0"
+    }
+}

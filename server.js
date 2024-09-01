@@ -69,6 +69,28 @@ app.post('/api/count/:id', (c) => {
     return c.json({ success: true });
 });
 
+// Replace the existing /api/export route with this new implementation
+app.get('/api/export', (c) => {
+    console.log('Export request received');
+    try {
+        const vehicles = db.query('SELECT * FROM vehicles').all();
+        console.log(`Retrieved ${vehicles.length} vehicles`);
+
+        let csvContent = "ID,Make,Model,Year,Count\n";
+        vehicles.forEach(vehicle => {
+            csvContent += `${vehicle.id},${vehicle.make},${vehicle.model},${vehicle.year},${vehicle.count}\n`;
+        });
+
+        c.header('Content-Disposition', 'attachment; filename=vehicles_export.csv');
+        c.header('Content-Type', 'text/csv');
+
+        return c.body(csvContent);
+    } catch (error) {
+        console.error('Error in /api/export:', error);
+        return c.json({ error: error.message || 'An unknown error occurred' }, 500);
+    }
+});
+
 // Serve static files
 app.use('/*', serveStatic({ root: './' }));
 
@@ -77,7 +99,7 @@ app.get('*', (c) => {
     return c.html(Bun.file('./index.html'));
 });
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
 console.log(`Server is running on port ${port}`);
 
 console.log(figlet.textSync('Bun!', {
@@ -87,6 +109,54 @@ console.log(figlet.textSync('Bun!', {
     width: 80,
     whitespaceBreak: true
 }));
+
+// New import route
+app.post('/api/import', async (c) => {
+    console.log('Import request received');
+    try {
+        const formData = await c.req.formData();
+        const file = formData.get('file');
+
+        if (!file || !(file instanceof File)) {
+            return c.json({ error: 'No file uploaded' }, 400);
+        }
+
+        const content = await file.text();
+        const lines = content.split('\n');
+        
+        // Skip the header row
+        lines.shift();
+
+        let importedCount = 0;
+        let skippedCount = 0;
+
+        for (const line of lines) {
+            if (line.trim() === '') continue;
+            const [make, model, year, count] = line.split(',');
+            
+            // Check if the vehicle already exists
+            const existingVehicle = db.query('SELECT * FROM vehicles WHERE make = ? AND model = ? AND year = ?')
+                .get(make, model, year);
+
+            if (existingVehicle) {
+                // Skip existing vehicle
+                skippedCount++;
+            } else {
+                // Insert new vehicle
+                db.query('INSERT INTO vehicles (make, model, year, count) VALUES (?, ?, ?, ?)')
+                    .run(make, model, parseInt(year), parseInt(count));
+                importedCount++;
+            }
+        }
+
+        return c.json({ 
+            message: `Successfully imported ${importedCount} new vehicles. Skipped ${skippedCount} existing vehicles.` 
+        });
+    } catch (error) {
+        console.error('Error in /api/import:', error);
+        return c.json({ error: error.message || 'An unknown error occurred' }, 500);
+    }
+});
 
 export default {
     port: port,

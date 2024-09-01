@@ -452,3 +452,138 @@ function handleResize() {
 
 // Add event listener for window resize
 window.addEventListener('resize', handleResize);
+
+// Add this function near the top of your file, with other utility functions
+function downloadFile(url, filename) {
+    console.log('Download file function called');
+    console.log('URL:', url);
+    console.log('Filename:', filename);
+    fetch(url)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            console.log('File download initiated');
+        })
+        .catch(error => console.error('Error downloading file:', error));
+}
+
+// Add this function to handle the export
+function exportToCSV() {
+    console.log('Export to CSV function called');
+    const exportButton = document.getElementById('export-button');
+    exportButton.disabled = true;
+    exportButton.textContent = 'Exporting...';
+    console.log('Export button disabled and text updated');
+
+    console.log('Initiating fetch request to /api/export');
+    fetch('/api/export')
+        .then(response => {
+            console.log('Received response:', response);
+            if (!response.ok) {
+                return response.text().then(text => {
+                    console.log('Received error text:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.log('Failed to parse error as JSON:', e);
+                        throw new Error(text || 'Network response was not ok');
+                    }
+                }).then(err => {
+                    console.log('Parsed error:', err);
+                    throw new Error(err.error || 'Unknown server error');
+                });
+            }
+            console.log('Response OK, attempting to get blob');
+            return response.text();
+        })
+        .then(text => {
+            const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'vehicles_export.csv');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            exportButton.disabled = false;
+            exportButton.textContent = 'Export to CSV';
+            console.log('Export completed successfully');
+        })
+        .catch(error => {
+            console.error('Error in export process:', error);
+            console.error('Error stack:', error.stack);
+            exportButton.disabled = false;
+            exportButton.textContent = 'Export Failed';
+            alert(`Export failed: ${error.message}`);
+            setTimeout(() => {
+                exportButton.textContent = 'Export to CSV';
+            }, 3000);
+        });
+}
+
+// Make sure to add an event listener for the export button
+document.addEventListener('DOMContentLoaded', () => {
+    const exportButton = document.getElementById('export-button');
+    if (exportButton) {
+        exportButton.addEventListener('click', exportToCSV);
+    } else {
+        console.error('Export button not found in the DOM');
+    }
+});
+
+function importCSV() {
+    const fileInput = document.getElementById('csv-file');
+    const importButton = document.getElementById('import-button');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select a file to import');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    importButton.disabled = true;
+    importButton.textContent = 'Importing...';
+
+    fetch('/api/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        alert(data.message);
+        // Refresh the vehicle list or update the UI as needed
+        loadVehicles();
+    })
+    .catch(error => {
+        console.error('Error importing CSV:', error);
+        alert(`Import failed: ${error.message}`);
+    })
+    .finally(() => {
+        importButton.disabled = false;
+        importButton.textContent = 'Import CSV';
+        fileInput.value = ''; // Clear the file input
+    });
+}
+
+// Add event listener for the import button
+document.addEventListener('DOMContentLoaded', () => {
+    const importButton = document.getElementById('import-button');
+    if (importButton) {
+        importButton.addEventListener('click', importCSV);
+    } else {
+        console.error('Import button not found');
+    }
+});

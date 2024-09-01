@@ -11,6 +11,8 @@
         "@types/bun": "^1.0.0"
     },
     "dependencies": {
-        "figlet": "^1.7.0"
+        "exceljs": "^4.4.0",
+        "figlet": "^1.7.0",
+        "hono": "^4.5.10"
     }
 }

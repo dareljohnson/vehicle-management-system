@@ -1,0 +1,147 @@
+## Project Title
+
+### Vehicle Management System
+
+## Project Description
+
+An application to manage the inventory count and analysis of the most popular vehicles on sale.
+
+## Assumptions
+
+I assume you are developing this project on a Microsoft Windows PC. A built-in Windows tool like notepad.exe is used in this project to create and edit files. If you are developing on Linux, you can use vim.
+
+```
+notepad .gitignore
+```
+
+On Linux:
+
+```
+vim .gitignore
+```
+
+
+You can also use a modern code editor like VSCode to follow along with this course.
+
+
+## How to Use the Project
+
+You can clone this project and skip the step-by-step instructions to develop from scratch.
+
+```
+ git clone https://github.com/dareljohnson/vehicle-management-system.git
+```
+
+Initialze a local git repository:
+
+```
+git init
+```
+
+Install dependencies:
+
+```
+bun install
+```
+
+
+## How to install and setup the project step-by-step
+
+Requirements:
+
+- bun v1.1.26
+- figlet v1.7.0
+- Hono v4.5.10
+- excelJS v4.4.0
+
+
+Optional:
+
+N/A
+
+## Step-by-step instructions
+
+On your Windows file system create a new project folder:
+
+```
+cd vehicle-management-system
+```
+
+Initialze a local git repository:
+
+```
+git init
+```
+
+Create a package.json file:
+
+```
+{
+    "name": "vehicle-management-system",
+    "author": "Darel Johnson",
+    "license": "GNU General Public License",
+    "module": "server.js",
+    "type": "module",
+    "scripts": {
+        "start": "bun run server.js"
+    },
+    "devDependencies": {
+        
+    },
+    "dependencies": {
+        
+    }
+}
+
+```
+
+
+Install bun on Windows (Powershell):
+
+```
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
+If install failed. Then install without a lock file.
+
+```
+bun install --no-save
+```
+
+Install packages
+
+```
+bun install
+```
+
+
+## How to Run the Project
+
+Run the local application server:
+
+```
+bun start
+```
+
+
+## How to Build the Project for production
+
+Build and package project for Production:
+
+TBD
+
+
+## Include Credits
+
+TBD
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first
+to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+[MIT](https://choosealicense.com/licenses/gpl-3.0/)
+

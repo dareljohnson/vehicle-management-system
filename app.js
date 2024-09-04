@@ -27,11 +27,21 @@ let currentAnalysisPage = 1;
 const itemsPerPage = 10;
 
 function filterVehicles(searchTerm) {
-    return allVehicles.filter(vehicle => 
-        vehicle.make.toLowerCase().includes(searchTerm) ||
-        vehicle.model.toLowerCase().includes(searchTerm) ||
-        vehicle.year.toString().includes(searchTerm)
-    );
+    console.log('Filtering vehicles. Total vehicles:', allVehicles.length);
+    console.log('Search term:', searchTerm);
+    const filtered = allVehicles.filter(vehicle => {
+        if (!vehicle) {
+            console.warn('Encountered null or undefined vehicle in allVehicles');
+            return false;
+        }
+        return (
+            (vehicle.make && vehicle.make.toLowerCase().includes(searchTerm)) ||
+            (vehicle.model && vehicle.model.toLowerCase().includes(searchTerm)) ||
+            (vehicle.year && vehicle.year.toString().includes(searchTerm))
+        );
+    });
+    console.log('Filtered vehicles:', filtered.length);
+    return filtered;
 }
 
 function displayVehicles(vehicles) {
@@ -86,20 +96,37 @@ async function deleteVehicle(id) {
 }
 
 async function loadVehicles() {
-    const response = await fetch('/api/vehicles');
-    allVehicles = await response.json();
-    filteredVehicles = []; // Reset filtered vehicles
-    displayVehicles(allVehicles);
+    try {
+        const response = await fetch('/api/vehicles');
+        if (!response.ok) {
+            throw new Error('Failed to fetch vehicles');
+        }
+        const data = await response.json();
+        allVehicles = data.filter(vehicle => vehicle != null);
+        console.log('Loaded vehicles:', allVehicles.length);
+        filteredVehicles = []; // Reset filtered vehicles
+        displayVehicles(allVehicles);
+    } catch (error) {
+        console.error('Error loading vehicles:', error);
+    }
 }
 
 async function loadAnalysis() {
-    const response = await fetch('/api/analysis');
-    const data = await response.json();
-    allVehicles = data.vehicles;
-    filteredVehicles = []; // Reset filtered vehicles
-    displayAnalysis(allVehicles);
-    document.getElementById('total-count').textContent = data.totalCount;
-    updateCharts(data);
+    try {
+        const response = await fetch('/api/analysis');
+        if (!response.ok) {
+            throw new Error('Failed to fetch analysis data');
+        }
+        const data = await response.json();
+        allVehicles = data.vehicles.filter(vehicle => vehicle != null);
+        console.log('Loaded vehicles for analysis:', allVehicles.length);
+        filteredVehicles = []; // Reset filtered vehicles
+        displayAnalysis(allVehicles);
+        document.getElementById('total-count').textContent = data.totalCount;
+        updateCharts(data);
+    } catch (error) {
+        console.error('Error loading analysis:', error);
+    }
 }
 
 function displayAnalysis(vehicles) {
@@ -356,25 +383,35 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelBtn.addEventListener('click', resetForm);
 
     adminSearch.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filteredVehicles = filterVehicles(searchTerm);
-        currentAdminPage = 1;
-        displayVehicles(filteredVehicles);
+        try {
+            const searchTerm = e.target.value.toLowerCase();
+            console.log('Admin search term:', searchTerm);
+            filteredVehicles = filterVehicles(searchTerm);
+            currentAdminPage = 1;
+            displayVehicles(filteredVehicles);
+        } catch (error) {
+            console.error('Error in admin search:', error);
+        }
     });
 
     analysisSearch.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        filteredVehicles = filterVehicles(searchTerm);
-        currentAnalysisPage = 1;
-        displayAnalysis(filteredVehicles);
-        updateCharts({ vehicles: filteredVehicles, totalCount: calculateTotalCount(filteredVehicles) });
-        
-        const vehiclesByMakeChartContainer = document.getElementById('vehiclesByMakeChart').parentElement;
-        if (searchTerm) {
-            vehiclesByMakeChartContainer.classList.add('hidden');
-        } else {
-            vehiclesByMakeChartContainer.classList.remove('hidden');
-            updateVehiclesByMakeChart(allVehicles);
+        try {
+            const searchTerm = e.target.value.toLowerCase();
+            console.log('Analysis search term:', searchTerm);
+            filteredVehicles = filterVehicles(searchTerm);
+            currentAnalysisPage = 1;
+            displayAnalysis(filteredVehicles);
+            updateCharts({ vehicles: filteredVehicles, totalCount: calculateTotalCount(filteredVehicles) });
+            
+            const vehiclesByMakeChartContainer = document.getElementById('vehiclesByMakeChart').parentElement;
+            if (searchTerm) {
+                vehiclesByMakeChartContainer.classList.add('hidden');
+            } else {
+                vehiclesByMakeChartContainer.classList.remove('hidden');
+                updateVehiclesByMakeChart(allVehicles);
+            }
+        } catch (error) {
+            console.error('Error in analysis search:', error);
         }
     });
 

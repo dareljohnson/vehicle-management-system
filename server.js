@@ -225,44 +225,34 @@ app.post('/api/import', async (c) => {
     let importedCount = 0;
     let skippedCount = 0;
 
-    if (isProd) {
-      const client = await db.connect();
-      try {
-        await client.query('BEGIN');
-        for (const record of records) {
-          const { make, model, year, count } = record;
-          const existingVehicle = await client.query('SELECT * FROM vehicles WHERE make = $1 AND model = $2 AND year = $3', [make, model, year]);
-          
-          if (existingVehicle.rows.length > 0) {
-            skippedCount++;
-          } else {
-            await client.query('INSERT INTO vehicles (make, model, year, count) VALUES ($1, $2, $3, $4)', [make, model, parseInt(year), parseInt(count)]);
-            importedCount++;
-          }
-        }
-        await client.query('COMMIT');
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
+    for (const record of records) {
+      const { make, model, year, count } = record;
+      
+      // Skip the row if any required field is empty
+      if (!make || !model || !year) {
+        skippedCount++;
+        continue;
       }
-    } else {
-      for (const record of records) {
-        const { make, model, year, count } = record;
-        const existingVehicle = db.query('SELECT * FROM vehicles WHERE make = ? AND model = ? AND year = ?').all(make, model, year);
-        
-        if (existingVehicle.length > 0) {
-          skippedCount++;
+
+      // Check if the vehicle already exists
+      const existingVehicle = await dbQuery('SELECT * FROM vehicles WHERE make = $1 AND model = $2 AND year = $3', [make, model, year]);
+
+      if (existingVehicle.length > 0) {
+        // Skip existing vehicle
+        skippedCount++;
+      } else {
+        // Insert new vehicle
+        if (isProd) {
+          await db`INSERT INTO vehicles (make, model, year, count) VALUES (${make}, ${model}, ${parseInt(year)}, ${parseInt(count) || 0})`;
         } else {
-          db.query('INSERT INTO vehicles (make, model, year, count) VALUES (?, ?, ?, ?)').run(make, model, parseInt(year), parseInt(count));
-          importedCount++;
+          db.query('INSERT INTO vehicles (make, model, year, count) VALUES (?, ?, ?, ?)').run(make, model, parseInt(year), parseInt(count) || 0);
         }
+        importedCount++;
       }
     }
 
     return c.json({ 
-      message: `Successfully imported ${importedCount} new vehicles. Skipped ${skippedCount} existing vehicles.` 
+      message: `Successfully imported ${importedCount} new vehicles. Skipped ${skippedCount} existing or invalid entries.` 
     });
   } catch (error) {
     console.error('Error in /api/import:', error);

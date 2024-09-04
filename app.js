@@ -27,8 +27,8 @@ let currentAnalysisPage = 1;
 const itemsPerPage = 10;
 
 function filterVehicles(searchTerm) {
-    console.log('Filtering vehicles. Total vehicles:', allVehicles.length);
-    console.log('Search term:', searchTerm);
+    //console.log('Filtering vehicles. Total vehicles:', allVehicles.length);
+    //console.log('Search term:', searchTerm);
     const filtered = allVehicles.filter(vehicle => {
         if (!vehicle) {
             console.warn('Encountered null or undefined vehicle in allVehicles');
@@ -40,7 +40,7 @@ function filterVehicles(searchTerm) {
             (vehicle.year && vehicle.year.toString().includes(searchTerm))
         );
     });
-    console.log('Filtered vehicles:', filtered.length);
+    //console.log('Filtered vehicles:', filtered.length);
     return filtered;
 }
 
@@ -103,7 +103,7 @@ async function loadVehicles() {
         }
         const data = await response.json();
         allVehicles = data.filter(vehicle => vehicle != null);
-        console.log('Loaded vehicles:', allVehicles.length);
+        //console.log('Loaded vehicles:', allVehicles.length);
         filteredVehicles = []; // Reset filtered vehicles
         displayVehicles(allVehicles);
     } catch (error) {
@@ -119,7 +119,7 @@ async function loadAnalysis() {
         }
         const data = await response.json();
         allVehicles = data.vehicles.filter(vehicle => vehicle != null);
-        console.log('Loaded vehicles for analysis:', allVehicles.length);
+        //console.log('Loaded vehicles for analysis:', allVehicles.length);
         filteredVehicles = []; // Reset filtered vehicles
         displayAnalysis(allVehicles);
         document.getElementById('total-count').textContent = data.totalCount;
@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     adminSearch.addEventListener('input', (e) => {
         try {
             const searchTerm = e.target.value.toLowerCase();
-            console.log('Admin search term:', searchTerm);
+            //console.log('Admin search term:', searchTerm);
             filteredVehicles = filterVehicles(searchTerm);
             currentAdminPage = 1;
             displayVehicles(filteredVehicles);
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
     analysisSearch.addEventListener('input', (e) => {
         try {
             const searchTerm = e.target.value.toLowerCase();
-            console.log('Analysis search term:', searchTerm);
+            //console.log('Analysis search term:', searchTerm);
             filteredVehicles = filterVehicles(searchTerm);
             currentAnalysisPage = 1;
             displayAnalysis(filteredVehicles);
@@ -493,8 +493,8 @@ window.addEventListener('resize', handleResize);
 // Add this function near the top of your file, with other utility functions
 function downloadFile(url, filename) {
     console.log('Download file function called');
-    console.log('URL:', url);
-    console.log('Filename:', filename);
+    //console.log('URL:', url);
+    //console.log('Filename:', filename);
     fetch(url)
         .then(response => response.blob())
         .then(blob => {
@@ -513,19 +513,19 @@ function downloadFile(url, filename) {
 
 // Add this function to handle the export
 function exportToCSV() {
-    console.log('Export to CSV function called');
+    //console.log('Export to CSV function called');
     const exportButton = document.getElementById('export-button');
     exportButton.disabled = true;
     exportButton.textContent = 'Exporting...';
-    console.log('Export button disabled and text updated');
+    //console.log('Export button disabled and text updated');
 
-    console.log('Initiating fetch request to /api/export');
+    //console.log('Initiating fetch request to /api/export');
     fetch('/api/export')
         .then(response => {
-            console.log('Received response:', response);
+            //console.log('Received response:', response);
             if (!response.ok) {
                 return response.text().then(text => {
-                    console.log('Received error text:', text);
+                    //console.log('Received error text:', text);
                     try {
                         return JSON.parse(text);
                     } catch (e) {

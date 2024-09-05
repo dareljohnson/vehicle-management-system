@@ -44,6 +44,10 @@ function filterVehicles(searchTerm) {
     return filtered;
 }
 
+function truncate(str, n) {
+    return (str.length > n) ? str.slice(0, n-1) + '…' : str;
+}
+
 function displayVehicles(vehicles, isLoading = false) {
     const tbody = document.querySelector('#vehicle-table tbody');
     tbody.innerHTML = '';
@@ -54,8 +58,9 @@ function displayVehicles(vehicles, isLoading = false) {
         // Display skeleton loader
         for (let i = 0; i < itemsPerPage; i++) {
             const row = tbody.insertRow();
-            for (let j = 0; j < 4; j++) { // 4 columns: make, model, year, actions
+            for (let j = 0; j < 4; j++) {
                 const cell = row.insertCell();
+                cell.className = j < 2 ? 'w-2/5' : 'text-center';
                 cell.innerHTML = '<div class="skeleton-loader skeleton-text"></div>';
             }
         }
@@ -65,15 +70,19 @@ function displayVehicles(vehicles, isLoading = false) {
 
         paginatedVehicles.forEach(vehicle => {
             const row = tbody.insertRow();
-            row.insertCell().textContent = vehicle.make;
-            row.insertCell().textContent = vehicle.model;
+            row.insertCell().className = 'px-2 text-left w-2/5';
+            row.cells[0].textContent = truncate(vehicle.make, 10);
+            row.cells[0].title = vehicle.make;
             
-            const yearCell = row.insertCell();
-            yearCell.textContent = vehicle.year;
-            yearCell.className = 'text-center px-2 w-20';
+            row.insertCell().className = 'px-2 text-left w-2/5';
+            row.cells[1].textContent = truncate(vehicle.model, 15);
+            row.cells[1].title = vehicle.model;
+            
+            row.insertCell().className = 'px-2 text-center';
+            row.cells[2].textContent = vehicle.year;
             
             const actionsCell = row.insertCell();
-            actionsCell.className = 'text-center px-2 w-32';
+            actionsCell.className = 'px-2 text-center';
             
             const editBtn = document.createElement('button');
             editBtn.textContent = 'Edit';
@@ -159,8 +168,8 @@ function displayAnalysis(vehicles) {
 
     paginatedVehicles.forEach(vehicle => {
         const row = tbody.insertRow();
-        row.insertCell().textContent = vehicle.make;
-        row.insertCell().textContent = vehicle.model;
+        row.insertCell().textContent = truncate(vehicle.make, 10);
+        row.insertCell().textContent = truncate(vehicle.model, 15);
         
         const yearCell = row.insertCell();
         yearCell.textContent = vehicle.year;

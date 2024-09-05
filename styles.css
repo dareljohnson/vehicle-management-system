@@ -21,3 +21,18 @@
     margin-bottom: 0.5rem;
     border-radius: 0.25rem;
 }
+
+#vehicle-table {
+    table-layout: fixed;
+}
+
+#vehicle-table th,
+#vehicle-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#vehicle-table td[title] {
+    cursor: help;
+}

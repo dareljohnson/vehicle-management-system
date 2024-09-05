@@ -149,13 +149,46 @@ app.get('/api/analysis', async (c) => {
 });
 
 app.post('/api/count/:id', async (c) => {
-  const id = c.req.param('id');
-  if (isProd) {
-    await db.query('UPDATE vehicles SET count = count + 1 WHERE id = $1', [id]);
-  } else {
-    db.query('UPDATE vehicles SET count = count + 1 WHERE id = ?').run(id);
-  }
-  return c.json({ success: true });
+    console.log('Received request:', c.req.method, c.req.url);
+    console.log('Request params:', c.req.param());
+    console.log('Request query:', c.req.query());
+
+    const id = c.req.param('id');
+
+    if (!id) {
+        console.error('No ID provided in the request');
+        return c.json({ error: 'Vehicle ID is required' }, 400);
+    }
+
+    console.log(`Attempting to increment count for vehicle ID: ${id}`);
+
+    try {
+        let newCount;
+        if (isProd) {
+            // PostgreSQL
+            const result = await db.query('UPDATE vehicles SET count = count + 1 WHERE id = $1 RETURNING count', [id]);
+            if (result.rows.length === 0) {
+                return c.json({ error: 'Vehicle not found' }, 404);
+            }
+            newCount = result.rows[0].count;
+        } else {
+            // SQLite
+            const stmt = db.prepare('UPDATE vehicles SET count = count + 1 WHERE id = ?');
+            stmt.run(id);
+            const result = db.prepare('SELECT count FROM vehicles WHERE id = ?').get(id);
+            if (!result) {
+                return c.json({ error: 'Vehicle not found' }, 404);
+            }
+            newCount = result.count;
+        }
+        console.log(`New count for vehicle ${id}: ${newCount}`);
+        return c.json({ message: 'Count incremented successfully', newCount }, 200);
+    } catch (error) {
+        console.error('Error incrementing count:', error);
+        console.error('Error details:', error.message);
+        if (error.stack) console.error('Error stack:', error.stack);
+        return c.json({ error: 'Failed to increment count' }, 500);
+    }
 });
 
 // Replace the existing /api/export route with this new implementation

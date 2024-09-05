@@ -213,7 +213,7 @@ app.post('/api/import', async (c) => {
     const content = await file.text();
     const records = await new Promise((resolve, reject) => {
       parse(content, {
-        columns: true,
+        columns: header => header.map(column => column.toLowerCase().trim()),
         skip_empty_lines: true,
         trim: true,
       }, (err, records) => {
@@ -224,35 +224,63 @@ app.post('/api/import', async (c) => {
 
     let importedCount = 0;
     let skippedCount = 0;
+    let invalidCount = 0;
 
     for (const record of records) {
-      const { make, model, year, count } = record;
+      // Normalize and clean the data
+      const make = (record.make || record.brand || '').trim().replace(/\s+/g, ' ');
+      const model = (record.model || '').trim().replace(/\s+/g, ' ');
+      const year = (record.year || '').trim();
+      const count = (record.count || '0').trim();
       
       // Skip the row if any required field is empty
       if (!make || !model || !year) {
-        skippedCount++;
+        invalidCount++;
+        console.log(`Invalid entry: ${JSON.stringify(record)}`);
         continue;
       }
 
-      // Check if the vehicle already exists
-      const existingVehicle = await dbQuery('SELECT * FROM vehicles WHERE make = $1 AND model = $2 AND year = $3', [make, model, year]);
+      try {
+        console.log(`Processing vehicle: "${make}" "${model}" "${year}"`);
 
-      if (existingVehicle.length > 0) {
-        // Skip existing vehicle
-        skippedCount++;
-      } else {
-        // Insert new vehicle
+        // Check if the vehicle already exists
+        let existingVehicle;
         if (isProd) {
-          await db`INSERT INTO vehicles (make, model, year, count) VALUES (${make}, ${model}, ${parseInt(year)}, ${parseInt(count) || 0})`;
+          const result = await db.query('SELECT * FROM vehicles WHERE LOWER(TRIM(make)) = LOWER($1) AND LOWER(TRIM(model)) = LOWER($2) AND TRIM(year::text) = $3', [make, model, year]);
+          existingVehicle = result.rows;
         } else {
-          db.query('INSERT INTO vehicles (make, model, year, count) VALUES (?, ?, ?, ?)').run(make, model, parseInt(year), parseInt(count) || 0);
+          existingVehicle = db.prepare('SELECT * FROM vehicles WHERE LOWER(TRIM(make)) = LOWER(?) AND LOWER(TRIM(model)) = LOWER(?) AND TRIM(CAST(year AS TEXT)) = ?').all(make, model, year);
         }
-        importedCount++;
+
+        console.log('Existing vehicle query result:', existingVehicle);
+
+        if (existingVehicle && existingVehicle.length > 0) {
+          // Skip existing vehicle
+          skippedCount++;
+          console.log(`Skipped existing vehicle: "${make}" "${model}" "${year}"`);
+        } else {
+          // Insert new vehicle
+          let insertResult;
+          if (isProd) {
+            insertResult = await db.query('INSERT INTO vehicles (make, model, year, count) VALUES ($1, $2, $3, $4) RETURNING id', [make, model, parseInt(year), parseInt(count) || 0]);
+          } else {
+            insertResult = db.prepare('INSERT INTO vehicles (make, model, year, count) VALUES (?, ?, ?, ?)').run(make, model, parseInt(year), parseInt(count) || 0);
+          }
+          importedCount++;
+          console.log(`Imported new vehicle: "${make}" "${model}" "${year}"`, insertResult);
+        }
+      } catch (error) {
+        console.error(`Error processing entry: ${JSON.stringify(record)}`, error);
+        console.error('Error details:', error.message);
+        if (error.stack) console.error('Error stack:', error.stack);
+        invalidCount++;
       }
     }
 
+    console.log(`Import summary: Imported ${importedCount}, Skipped ${skippedCount}, Invalid ${invalidCount}`);
+
     return c.json({ 
-      message: `Successfully imported ${importedCount} new vehicles. Skipped ${skippedCount} existing or invalid entries.` 
+      message: `Successfully imported ${importedCount} new vehicles. Skipped ${skippedCount} existing entries. ${invalidCount} invalid entries.` 
     });
   } catch (error) {
     console.error('Error in /api/import:', error);

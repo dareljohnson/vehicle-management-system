@@ -44,37 +44,50 @@ function filterVehicles(searchTerm) {
     return filtered;
 }
 
-function displayVehicles(vehicles) {
+function displayVehicles(vehicles, isLoading = false) {
     const tbody = document.querySelector('#vehicle-table tbody');
     tbody.innerHTML = '';
     const startIndex = (currentAdminPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const paginatedVehicles = vehicles.slice(startIndex, endIndex);
 
-    paginatedVehicles.forEach(vehicle => {
-        const row = tbody.insertRow();
-        row.insertCell().textContent = vehicle.make;
-        row.insertCell().textContent = vehicle.model;
-        
-        const yearCell = row.insertCell();
-        yearCell.textContent = vehicle.year;
-        yearCell.className = 'text-center px-2 w-20';
-        
-        const actionsCell = row.insertCell();
-        actionsCell.className = 'text-center px-2 w-32';
-        
-        const editBtn = document.createElement('button');
-        editBtn.textContent = 'Edit';
-        editBtn.className = 'bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 mr-1 text-xs';
-        editBtn.onclick = () => editVehicle(vehicle);
-        actionsCell.appendChild(editBtn);
-        
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.className = 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs';
-        deleteBtn.onclick = () => deleteVehicle(vehicle.id);
-        actionsCell.appendChild(deleteBtn);
-    });
+    if (isLoading) {
+        // Display skeleton loader
+        for (let i = 0; i < itemsPerPage; i++) {
+            const row = tbody.insertRow();
+            for (let j = 0; j < 4; j++) { // 4 columns: make, model, year, actions
+                const cell = row.insertCell();
+                cell.innerHTML = '<div class="skeleton-loader skeleton-text"></div>';
+            }
+        }
+    } else {
+        // Display actual data
+        const paginatedVehicles = vehicles.slice(startIndex, endIndex);
+
+        paginatedVehicles.forEach(vehicle => {
+            const row = tbody.insertRow();
+            row.insertCell().textContent = vehicle.make;
+            row.insertCell().textContent = vehicle.model;
+            
+            const yearCell = row.insertCell();
+            yearCell.textContent = vehicle.year;
+            yearCell.className = 'text-center px-2 w-20';
+            
+            const actionsCell = row.insertCell();
+            actionsCell.className = 'text-center px-2 w-32';
+            
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.className = 'bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 mr-1 text-xs';
+            editBtn.onclick = () => editVehicle(vehicle);
+            actionsCell.appendChild(editBtn);
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-xs';
+            deleteBtn.onclick = () => deleteVehicle(vehicle.id);
+            actionsCell.appendChild(deleteBtn);
+        });
+    }
 
     updatePagination(vehicles.length, 'admin');
 }
@@ -97,6 +110,9 @@ async function deleteVehicle(id) {
 
 async function loadVehicles() {
     try {
+        // Show skeleton loader
+        displayVehicles([], true);
+
         const response = await fetch('/api/vehicles');
         if (!response.ok) {
             throw new Error('Failed to fetch vehicles');
@@ -105,9 +121,14 @@ async function loadVehicles() {
         allVehicles = data.filter(vehicle => vehicle != null);
         //console.log('Loaded vehicles:', allVehicles.length);
         filteredVehicles = []; // Reset filtered vehicles
+
+        // Display actual data
         displayVehicles(allVehicles);
     } catch (error) {
         console.error('Error loading vehicles:', error);
+        // Display error message in the table
+        const tbody = document.querySelector('#vehicle-table tbody');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-red-500">Error loading vehicles. Please try again.</td></tr>';
     }
 }
 

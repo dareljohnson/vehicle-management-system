@@ -173,11 +173,11 @@ function displayAnalysis(vehicles) {
         
         const yearCell = row.insertCell();
         yearCell.textContent = vehicle.year;
-        yearCell.className = 'text-center px-2 w-20';
+        yearCell.className = 'text-center px-2';
         
         const counterCell = row.insertCell();
         counterCell.textContent = vehicle.count;
-        counterCell.className = 'text-center px-2 w-20';
+        counterCell.className = 'text-center px-2';
         
         const actionCell = row.insertCell();
         actionCell.className = 'text-center px-2 w-24';

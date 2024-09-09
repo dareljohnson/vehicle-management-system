@@ -143,16 +143,30 @@ async function loadVehicles() {
 
 async function loadAnalysis() {
     try {
+        console.log('Fetching analysis data...');
         const response = await fetch('/api/analysis');
-        if (!response.ok) {
-            throw new Error('Failed to fetch analysis data');
-        }
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Response data:', data);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch analysis data: ${data.error}. Details: ${data.details}`);
+        }
+
+        console.log(`Received analysis data. Vehicles: ${data.vehicles.length}, Total count: ${data.totalCount}`);
+
         allVehicles = data.vehicles.filter(vehicle => vehicle != null);
-        console.log('Loaded vehicles for analysis:', allVehicles.length);
-        filteredVehicles = []; // Reset filtered vehicles
+        filteredVehicles = [];
         displayAnalysis(allVehicles);
-        document.getElementById('total-count').textContent = data.totalCount;
+
+        const totalCountElement = document.getElementById('total-count');
+        if (totalCountElement) {
+            totalCountElement.textContent = data.totalCount || '0';
+            console.log(`Updated total count element: ${totalCountElement.textContent}`);
+        } else {
+            console.warn('Total count element not found in the DOM');
+        }
+
         updateCharts(data);
     } catch (error) {
         console.error('Error loading analysis:', error);
@@ -192,50 +206,40 @@ function displayAnalysis(vehicles) {
     updatePagination(vehicles.length, 'analysis');
 }
 
-async function incrementCount(vehicleId) {
+function incrementCount(vehicleId) {
     console.log(`Attempting to increment count for vehicle ID: ${vehicleId}`);
-    try {
-        const response = await fetch(`/api/count/${vehicleId}`, { method: 'POST' });
-        console.log('Response status:', response.status);
-        const text = await response.text();
-        console.log('Response text:', text);
-        
-        if (!response.ok) {
-            throw new Error(`Failed to increment count: ${text}`);
-        }
-        
-        let data;
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error('Error parsing JSON:', e);
-            throw new Error('Invalid response from server');
-        }
-
-        if (data.newCount !== undefined) {
-            console.log(`Updating count for vehicle ${vehicleId} to ${data.newCount}`);
+    fetch(`/api/count/${vehicleId}`, { method: 'POST' })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.error) {
+                throw new Error(data.error);
+            }
             const countCell = document.querySelector(`#analysis-table tr[data-id="${vehicleId}"] td:nth-child(4)`);
             if (countCell) {
                 countCell.textContent = data.newCount;
-            } else {
-                console.log(`Count cell not found for vehicle ${vehicleId}`);
             }
-            
             const totalCountElement = document.getElementById('total-count');
             if (totalCountElement) {
-                const currentTotal = parseInt(totalCountElement.textContent, 10);
-                totalCountElement.textContent = currentTotal + 1;
-                console.log(`Updated total count to ${currentTotal + 1}`);
-            } else {
-                console.log('Total count element not found');
+                totalCountElement.textContent = data.totalCount;
             }
-        } else {
-            console.log('New count not received from server');
-        }
-    } catch (error) {
-        console.error('Error incrementing count:', error);
-        alert('Failed to increment count. Please try again.');
-    }
+            
+            // Update the vehicle in allVehicles array
+            const vehicleIndex = allVehicles.findIndex(v => v.id === vehicleId);
+            if (vehicleIndex !== -1) {
+                allVehicles[vehicleIndex].count = data.newCount;
+            }
+            
+            // Update charts
+            updateCharts({ vehicles: allVehicles, totalCount: data.totalCount });
+        })
+        .catch(error => {
+            console.error('Error incrementing count:', error);
+            alert('Failed to increment count. Please try again.');
+        });
 }
 
 function updateCharts(data) {

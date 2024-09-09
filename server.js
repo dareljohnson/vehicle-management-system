@@ -144,49 +144,86 @@ app.delete('/api/vehicles/:id', async (c) => {
 });
 
 app.get('/api/analysis', async (c) => {
-  const vehicles = await dbQuery('SELECT *, (SELECT SUM(count) FROM vehicles) as totalCount FROM vehicles');
-  return c.json({ vehicles, totalCount: vehicles[0]?.totalCount || 0 });
+    console.log('Received request for analysis data');
+    try {
+        let vehicles, totalCount;
+        const query = `
+            SELECT v.*, 
+                   (SELECT COALESCE(SUM(count), 0) FROM vehicles) as total_count
+            FROM vehicles v
+        `;
+
+        if (isProd) {
+            // PostgreSQL
+            console.log('Executing PostgreSQL query');
+            try {
+                const result = await db.query(query);
+                console.log('Query executed successfully');
+                vehicles = result.rows;
+                console.log(`Retrieved ${vehicles.length} vehicles`);
+                totalCount = vehicles.length > 0 ? parseInt(vehicles[0].total_count, 10) : 0;
+                console.log(`Total count: ${totalCount}`);
+            } catch (dbError) {
+                console.error('Database query error:', dbError);
+                throw new Error(`Database query failed: ${dbError.message}`);
+            }
+        } else {
+            // SQLite
+            console.log('Executing SQLite query');
+            vehicles = db.prepare(query).all();
+            totalCount = vehicles.length > 0 ? vehicles[0].total_count : 0;
+        }
+
+        // Remove total_count from individual vehicle objects
+        vehicles = vehicles.map(({ total_count, ...vehicle }) => vehicle);
+
+        console.log(`Analysis data prepared. Vehicles: ${vehicles.length}, Total count: ${totalCount}`);
+
+        return c.json({ vehicles, totalCount });
+    } catch (error) {
+        console.error('Error fetching analysis data:', error);
+        console.error('Error stack:', error.stack);
+        return c.json({ error: 'Failed to fetch analysis data', details: error.message }, 500);
+    }
 });
 
 app.post('/api/count/:id', async (c) => {
-    console.log('Received request:', c.req.method, c.req.url);
-    console.log('Request params:', c.req.param());
-    console.log('Request query:', c.req.query());
-
+    console.log('Received count increment request');
     const id = c.req.param('id');
-
-    if (!id) {
-        console.error('No ID provided in the request');
-        return c.json({ error: 'Vehicle ID is required' }, 400);
-    }
-
-    console.log(`Attempting to increment count for vehicle ID: ${id}`);
+    console.log(`Vehicle ID: ${id}`);
 
     try {
-        let newCount;
+        let newCount, totalCount;
         if (isProd) {
             // PostgreSQL
-            const result = await db.query('UPDATE vehicles SET count = count + 1 WHERE id = $1 RETURNING count', [id]);
+            const result = await db.query(`
+                UPDATE vehicles 
+                SET count = count + 1 
+                WHERE id = $1 
+                RETURNING count
+            `, [id]);
             if (result.rows.length === 0) {
                 return c.json({ error: 'Vehicle not found' }, 404);
             }
             newCount = result.rows[0].count;
+            const totalResult = await db.query('SELECT SUM(count) as total FROM vehicles');
+            totalCount = totalResult.rows[0].total;
         } else {
             // SQLite
             const stmt = db.prepare('UPDATE vehicles SET count = count + 1 WHERE id = ?');
-            stmt.run(id);
-            const result = db.prepare('SELECT count FROM vehicles WHERE id = ?').get(id);
-            if (!result) {
+            const updateResult = stmt.run(id);
+            if (updateResult.changes === 0) {
                 return c.json({ error: 'Vehicle not found' }, 404);
             }
+            const result = db.prepare('SELECT count FROM vehicles WHERE id = ?').get(id);
             newCount = result.count;
+            const totalResult = db.prepare('SELECT SUM(count) as total FROM vehicles').get();
+            totalCount = totalResult.total;
         }
-        console.log(`New count for vehicle ${id}: ${newCount}`);
-        return c.json({ message: 'Count incremented successfully', newCount }, 200);
+        console.log(`New count: ${newCount}, Total count: ${totalCount}`);
+        return c.json({ message: 'Count incremented successfully', newCount, totalCount });
     } catch (error) {
         console.error('Error incrementing count:', error);
-        console.error('Error details:', error.message);
-        if (error.stack) console.error('Error stack:', error.stack);
         return c.json({ error: 'Failed to increment count' }, 500);
     }
 });

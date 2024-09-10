@@ -147,7 +147,7 @@ async function loadAnalysis() {
         const response = await fetch('/api/analysis');
         console.log('Response status:', response.status);
         const data = await response.json();
-        console.log('Response data:', data);
+        //console.log('Response data:', data);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch analysis data: ${data.error}. Details: ${data.details}`);
